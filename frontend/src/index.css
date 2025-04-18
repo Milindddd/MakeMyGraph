@@ -1,0 +1,134 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(-20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Custom utility classes */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.5s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.3s ease-out forwards;
+}
+
+/* Custom components */
+.btn {
+  @apply px-4 py-2 rounded-lg transition-all duration-200 font-medium;
+}
+
+.btn-primary {
+  @apply bg-blue-500 text-white hover:bg-blue-600 active:bg-blue-700;
+}
+
+.btn-secondary {
+  @apply bg-gray-200 text-gray-700 hover:bg-gray-300 active:bg-gray-400;
+}
+
+.btn-danger {
+  @apply bg-red-500 text-white hover:bg-red-600 active:bg-red-700;
+}
+
+.card {
+  @apply bg-white rounded-xl shadow-lg p-6 transition-all duration-200 hover:shadow-xl;
+}
+
+.input-field {
+  @apply w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200;
+}
+
+.select-field {
+  @apply w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200;
+}
+
+/* Glass morphism effect */
+.glass {
+  @apply bg-white bg-opacity-70 backdrop-blur-lg;
+}
+
+/* Loading animation */
+.loading-spinner {
+  @apply w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin;
+}
+
+/* Hover effects */
+.hover-lift {
+  @apply transition-transform duration-200 hover:-translate-y-1;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-400 rounded-full hover:bg-gray-500;
+}
+
+/* Global styles */
+body {
+  @apply antialiased text-gray-800;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  @apply font-semibold tracking-tight;
+}
+
+/* Links */
+a {
+  @apply transition-colors duration-200;
+}
+
+/* Focus styles */
+*:focus-visible {
+  @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+}
+
+/* Container padding */
+.container {
+  @apply px-4 sm:px-6 lg:px-8;
+}
+
+/* Gradient backgrounds */
+.bg-gradient-primary {
+  @apply bg-gradient-to-br from-blue-500 to-indigo-600;
+}
+
+.bg-gradient-secondary {
+  @apply bg-gradient-to-br from-gray-50 to-gray-100;
+}
+
+/* Text gradients */
+.text-gradient {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600;
+} 
