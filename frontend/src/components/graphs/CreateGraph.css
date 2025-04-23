@@ -1,0 +1,238 @@
+@import '../../styles/variables.css';
+
+/* ==========================
+   Layout
+   ========================== */
+.create-graph-container {
+  min-height: calc(100vh - 64px); /* Subtract navbar height */
+  background: linear-gradient(135deg, #fff8f3 0%, #ffede0 100%);
+  padding: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;  
+}
+
+.create-graph-header {
+  text-align: center;
+  margin-bottom: var(--spacing-xl);
+}
+
+/* ==========================
+   Titles
+   ========================== */
+.create-graph-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #1f2937;
+  margin-bottom: var(--spacing-sm);
+  position: relative;
+  padding-bottom: var(--spacing-sm);
+  display: inline-block;
+}
+
+.create-graph-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 4px;
+  background: linear-gradient(to right, #ff6b00, #ff9a3d);
+  border-radius: 2px;
+}
+
+/* ==========================
+   Card/Upload Section
+   ========================== */
+.upload-section {
+  background: white;
+  border-radius: var(--border-radius-lg);
+  padding: var(--spacing-lg);
+  box-shadow: 0 4px 6px -1px rgba(255, 107, 0, 0.1),
+              0 2px 4px -1px rgba(255, 107, 0, 0.06);
+  border: 2px solid #ffe4d4;
+  width: 100%;
+  max-width: var(--container-lg);
+  margin-bottom: var(--spacing-lg);
+  transition: var(--transition-normal);
+}
+
+.upload-section:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(255, 107, 0, 0.1),
+              0 4px 6px -2px rgba(255, 107, 0, 0.05);
+  border-color: #ffcba4;
+}
+
+.file-upload-area {
+  border: 2px dashed #ffcba4;
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-xl);
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  background: #fff8f3;
+}
+
+.file-upload-area:hover {
+  border-color: #ff6b00;
+  background: #fff1e7;
+}
+
+.column-select {
+  margin-top: var(--spacing-lg);
+}
+
+.card-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  margin-bottom: var(--spacing-md);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.card-title::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--color-primary);
+  border-radius: 50%;
+}
+
+/* ==========================
+   Form Elements
+   ========================== */
+.select-field {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 2px solid #ffe4d4;
+  border-radius: var(--border-radius-md);
+  background-color: white;
+  color: #4b5563;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: var(--transition-fast);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ea580c'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1.5em;
+}
+
+.select-field:focus {
+  outline: none;
+  border-color: #ff6b00;
+  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.1);
+}
+
+/* ==========================
+   Buttons
+   ========================== */
+.btn {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--border-radius-sm);
+  font-weight: 600;
+  font-size: 1rem;
+  transition: var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  min-width: 120px;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #ff6b00 0%, #ff9a3d 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 6px -1px rgba(255, 107, 0, 0.1);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, #ff5500 0%, #ff8c2d 100%);
+  box-shadow: 0 6px 8px -1px rgba(255, 107, 0, 0.2);
+}
+
+.btn-secondary {
+  background: white;
+  color: #ff6b00;
+  border: 2px solid #ff6b00;
+}
+
+.btn-secondary:hover {
+  background: #fff1e7;
+  transform: translateY(-2px);
+}
+
+/* ==========================
+   Loading Spinner
+   ========================== */
+.loading-spinner {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 3px solid var(--color-spinner-bg);
+  border-radius: 50%;
+  border-top-color: var(--color-spinner-fg);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ==========================
+   Responsive Design
+   ========================== */
+@media (max-width: 1024px) {
+  .upload-section {
+    max-width: 95vw;
+  }
+}
+
+@media (max-width: 768px) {
+  .create-graph-container {
+    padding: var(--spacing-md);
+  }
+  
+  .create-graph-title {
+    font-size: 2rem;
+  }
+  
+  .upload-section {
+    padding: var(--spacing-md);
+  }
+  
+  .btn {
+    padding: var(--spacing-xs) var(--spacing-md);
+    min-width: 100px;
+  }
+}
+
+@media (max-width: 480px) {
+  .create-graph-title {
+    font-size: 1.5rem;
+    padding-bottom: var(--spacing-xs);
+  }
+  
+  .upload-section {
+    padding: var(--spacing-sm);
+  }
+  
+  .card-title {
+    font-size: 1.25rem;
+  }
+  
+  .select-field {
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
+  
+  .file-upload-area {
+    padding: var(--spacing-md);
+  }
+}

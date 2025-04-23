@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { getSavedGraphs, deleteGraph } from "../../services/mongodb";
 import GraphDisplay from "./GraphDisplay";
+import "./SavedGraphs.css";
 
 const SavedGraphs = () => {
   const [graphs, setGraphs] = useState([]);
@@ -15,10 +17,12 @@ const SavedGraphs = () => {
   const loadSavedGraphs = async () => {
     try {
       setLoading(true);
+      setError(null);
       const savedGraphs = await getSavedGraphs();
       setGraphs(savedGraphs);
     } catch (error) {
-      setError("Error loading saved graphs");
+      console.error('Error loading saved graphs:', error);
+      setError("Unable to load saved graphs. Please try again later.");
       toast.error("Failed to load saved graphs");
     } finally {
       setLoading(false);
@@ -32,6 +36,7 @@ const SavedGraphs = () => {
         setGraphs(graphs.filter((graph) => graph._id !== graphId));
         toast.success("Graph deleted successfully");
       } catch (error) {
+        console.error('Error deleting graph:', error);
         toast.error("Failed to delete graph");
       }
     }
@@ -39,63 +44,92 @@ const SavedGraphs = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p className="loading-text">Loading saved graphs...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
-        <div className="text-red-500 text-xl">{error}</div>
+      <div className="error-container">
+        <div className="error-content">
+          <div className="error-icon">❌</div>
+          <h2 className="error-title">Oops! Something went wrong</h2>
+          <div className="error-message">{error}</div>
+          <div className="error-actions">
+            <button 
+              onClick={loadSavedGraphs} 
+              className="retry-button"
+            >
+              <span className="retry-icon">🔄</span>
+              Try Again
+            </button>
+            <Link to="/" className="home-button">
+              Go to Home
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (graphs.length === 0) {
+    return (
+      <div className="saved-graphs-container">
+        <div className="saved-graphs-header">
+          <h1 className="saved-graphs-title">Saved Graphs</h1>
+        </div>
+        <div className="empty-state">
+          <h2 className="empty-state-title">No Saved Graphs Yet</h2>
+          <p className="empty-state-subtitle">
+            Create your first graph to see it here!
+          </p>
+          <Link to="/" className="graph-btn graph-btn-view">
+            Create New Graph
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-800 py-8">
-      <div className="container mx-auto px-4">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8 text-center">
-          Saved Graphs
-        </h1>
-
-        {graphs.length === 0 ? (
-          <div className="text-center text-gray-600 dark:text-gray-300">
-            <p className="text-xl">No saved graphs found</p>
-            <p className="mt-2">Create a new graph to get started!</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-8">
-            {graphs.map((graph) => (
-              <div
-                key={graph._id}
-                className="bg-white dark:bg-gray-700 rounded-lg shadow-md p-6"
-              >
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
-                    {graph.name}
-                  </h2>
-                  <div className="space-x-4">
-                    <button
-                      onClick={() => handleDelete(graph._id)}
-                      className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                  Created: {new Date(graph.createdAt).toLocaleDateString()}
-                </div>
-                <GraphDisplay
-                  data={graph.data}
-                  selectedColumn={graph.selectedColumn}
-                />
+    <div className="saved-graphs-container">
+      <div className="saved-graphs-header">
+        <h1 className="saved-graphs-title">Saved Graphs</h1>
+        <Link to="/" className="create-graph-btn">
+          Create New Graph
+        </Link>
+      </div>
+      <div className="graphs-grid">
+        {graphs.map((graph) => (
+          <div key={graph._id} className="graph-card">
+            <div className="graph-header">
+              <h2 className="graph-title">{graph.name}</h2>
+              <div className="graph-date">
+                Created: {new Date(graph.createdAt).toLocaleDateString()}
               </div>
-            ))}
+            </div>
+            <div className="graph-preview">
+              <GraphDisplay
+                data={graph.data}
+                selectedColumn={graph.selectedColumn}
+              />
+            </div>
+            <div className="graph-actions">
+              <Link to={`/graph/${graph._id}`} className="graph-btn graph-btn-view">
+                View Graph
+              </Link>
+              <button
+                onClick={() => handleDelete(graph._id)}
+                className="delete-button"
+              >
+                Delete
+              </button>
+            </div>
           </div>
-        )}
+        ))}
       </div>
     </div>
   );

@@ -12,6 +12,7 @@ import {
 import { Bar, Pie } from "react-chartjs-2";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
+import "./GraphDisplay.css";
 
 ChartJS.register(
   CategoryScale,
@@ -84,18 +85,18 @@ const GraphDisplay = ({ data, selectedColumn }) => {
             ]
           : [],
         backgroundColor: [
-          "rgba(59, 130, 246, 0.7)",
-          "rgba(99, 102, 241, 0.7)",
-          "rgba(139, 92, 246, 0.7)",
-          "rgba(167, 139, 250, 0.7)",
-          "rgba(196, 181, 253, 0.7)",
+          "rgba(251, 146, 60, 0.7)",
+          "rgba(234, 88, 12, 0.7)",
+          "rgba(194, 65, 12, 0.7)",
+          "rgba(154, 52, 18, 0.7)",
+          "rgba(124, 45, 18, 0.7)",
         ],
         borderColor: [
-          "rgb(59, 130, 246)",
-          "rgb(99, 102, 241)",
-          "rgb(139, 92, 246)",
-          "rgb(167, 139, 250)",
-          "rgb(196, 181, 253)",
+          "rgb(251, 146, 60)",
+          "rgb(234, 88, 12)",
+          "rgb(194, 65, 12)",
+          "rgb(154, 52, 18)",
+          "rgb(124, 45, 18)",
         ],
         borderWidth: 2,
       },
@@ -128,60 +129,53 @@ const GraphDisplay = ({ data, selectedColumn }) => {
   };
 
   return (
-    <div className="w-full space-y-8 animate-fade-in">
+    <div className="graph-display-container">
       {statistics ? (
         <>
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex space-x-4">
+          <div className="chart-controls">
+            <div className="chart-type-buttons">
               <button
                 onClick={() => setChartType("bar")}
-                className={`btn ${
-                  chartType === "bar" ? "btn-primary" : "btn-secondary"
-                } hover-lift`}
+                className={`btn ${chartType === "bar" ? "btn-primary" : "btn-secondary"}`}
               >
                 Bar Chart
               </button>
               <button
                 onClick={() => setChartType("pie")}
-                className={`btn ${
-                  chartType === "pie" ? "btn-primary" : "btn-secondary"
-                } hover-lift`}
+                className={`btn ${chartType === "pie" ? "btn-primary" : "btn-secondary"}`}
               >
                 Pie Chart
               </button>
             </div>
-            <div className="flex space-x-2">
+            <div className="export-buttons">
               <button
                 onClick={() => downloadChart("png")}
                 disabled={isExporting}
-                className="btn btn-secondary hover-lift"
+                className="btn btn-secondary"
               >
                 PNG
               </button>
               <button
                 onClick={() => downloadChart("jpeg")}
                 disabled={isExporting}
-                className="btn btn-secondary hover-lift"
+                className="btn btn-secondary"
               >
                 JPEG
               </button>
               <button
                 onClick={() => downloadChart("pdf")}
                 disabled={isExporting}
-                className="btn btn-secondary hover-lift"
+                className="btn btn-secondary"
               >
                 PDF
               </button>
             </div>
           </div>
 
-          <div
-            id="chart-container"
-            className="bg-white p-6 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl"
-          >
-            <div className="h-[400px] relative">
+          <div id="chart-container" className="chart-container">
+            <div className="chart-wrapper">
               {isExporting && (
-                <div className="absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center z-10">
+                <div className="export-overlay">
                   <div className="loading-spinner"></div>
                 </div>
               )}
@@ -235,29 +229,16 @@ const GraphDisplay = ({ data, selectedColumn }) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="stats-grid">
             {Object.entries(statistics).map(([key, value], index) => (
-              <div
-                key={key}
-                className="card hover-lift animate-fade-in"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                <h3 className="text-lg font-semibold capitalize text-gray-700">
-                  {key}
-                </h3>
-                <p className="text-2xl font-bold text-blue-600 mt-2">{value}</p>
+              <div key={key} className="stat-card">
+                <h3 className="stat-title">{key}</h3>
+                <p className="stat-value">{value}</p>
               </div>
             ))}
           </div>
         </>
-      ) : (
-        <div className="text-center text-gray-600 py-12">
-          <div className="text-6xl mb-4">📊</div>
-          <p className="text-xl">
-            Please select a column to display statistics
-          </p>
-        </div>
-      )}
+      ) : null}
     </div>
   );
 };

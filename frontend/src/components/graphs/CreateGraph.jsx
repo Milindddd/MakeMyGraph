@@ -3,6 +3,7 @@ import { toast } from "react-toastify";
 import FileUpload from "../upload/FileUpload";
 import GraphDisplay from "./GraphDisplay";
 import { saveGraph } from "../../services/mongodb";
+import "./CreateGraph.css";
 
 const CreateGraph = () => {
   const [data, setData] = useState(null);
@@ -42,19 +43,16 @@ const CreateGraph = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 py-8 px-4">
+    <div className="create-graph-container">
       <div className="container mx-auto max-w-6xl">
-        <h1 className="text-4xl font-bold text-gray-800 mb-8 text-center animate-fade-in">
+        <h1 className="create-graph-title">
           Create New Graph
         </h1>
 
         <div className="space-y-8">
           {/* File Upload Section */}
-          <div
-            className="card animate-fade-in"
-            style={{ animationDelay: "0.2s" }}
-          >
-            <h2 className="text-2xl font-semibold text-gray-800 mb-4">
+          <div className="card">
+            <h2 className="card-title">
               Upload Your Data
             </h2>
             <FileUpload onDataProcessed={handleDataProcessed} />
@@ -62,11 +60,8 @@ const CreateGraph = () => {
 
           {/* Column Selection */}
           {data && columns.length > 0 && (
-            <div
-              className="card animate-fade-in"
-              style={{ animationDelay: "0.4s" }}
-            >
-              <h2 className="text-2xl font-semibold text-gray-800 mb-4">
+            <div className="card">
+              <h2 className="card-title">
                 Select Column to Analyze
               </h2>
               <select
@@ -86,24 +81,19 @@ const CreateGraph = () => {
 
           {/* Graph Display */}
           {data && selectedColumn && (
-            <div
-              className="card animate-fade-in"
-              style={{ animationDelay: "0.6s" }}
-            >
+            <div className="card">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-semibold text-gray-800">
+                <h2 className="card-title">
                   Graph Visualization
                 </h2>
                 <button
                   onClick={handleSaveGraph}
                   disabled={isSaving}
-                  className={`btn ${
-                    isSaving ? "btn-secondary" : "btn-primary"
-                  } hover-lift`}
+                  className={`btn ${isSaving ? "btn-secondary" : "btn-primary"}`}
                 >
                   {isSaving ? (
                     <div className="flex items-center">
-                      <div className="loading-spinner mr-2 w-5 h-5"></div>
+                      <div className="loading-spinner mr-2"></div>
                       Saving...
                     </div>
                   ) : (
