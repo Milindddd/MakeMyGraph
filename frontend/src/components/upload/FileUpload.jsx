@@ -1,120 +1,119 @@
-import { useState, useCallback } from "react";
-import { useDropzone } from "react-dropzone";
-import { toast } from "react-toastify";
+import { useState } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
+import "./FileUpload.css";
 
 const FileUpload = ({ onDataProcessed }) => {
   const [isLoading, setIsLoading] = useState(false);
 
-  const processFile = async (file) => {
-    const fileExtension = file.name.split(".").pop().toLowerCase();
+  const processFile = (file) => {
+    setIsLoading(true);
+    const reader = new FileReader();
 
-    try {
-      let data;
-      if (fileExtension === "csv") {
-        data = await new Promise((resolve) => {
-          Papa.parse(file, {
-            complete: (results) => resolve(results.data),
+    reader.onload = (e) => {
+      try {
+        let data;
+        if (file.type === "text/csv") {
+          Papa.parse(e.target.result, {
             header: true,
+            complete: (results) => {
+              data = results.data;
+              onDataProcessed(data);
+              setIsLoading(false);
+            },
+            error: (error) => {
+              console.error("Error parsing CSV:", error);
+              setIsLoading(false);
+            },
           });
-        });
-      } else if (["xlsx", "xls"].includes(fileExtension)) {
-        const buffer = await file.arrayBuffer();
-        const workbook = XLSX.read(buffer);
-        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        data = XLSX.utils.sheet_to_json(worksheet);
-      } else {
-        throw new Error("Unsupported file format");
+        } else if (
+          file.type ===
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ) {
+          const workbook = XLSX.read(e.target.result, { type: "array" });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          data = XLSX.utils.sheet_to_json(worksheet);
+          onDataProcessed(data);
+          setIsLoading(false);
+        } else {
+          throw new Error("Unsupported file format");
+        }
+      } catch (error) {
+        console.error("Error processing file:", error);
+        setIsLoading(false);
       }
+    };
 
-      if (!data || data.length === 0) {
-        throw new Error("No data found in file");
-      }
+    reader.readAsArrayBuffer(file);
+  };
 
-      onDataProcessed(data);
-    } catch (error) {
-      toast.error(`Error processing file: ${error.message}`);
-    } finally {
-      setIsLoading(false);
+  const handleDrop = (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      processFile(file);
     }
   };
 
-  const onDrop = useCallback((acceptedFiles) => {
-    const file = acceptedFiles[0];
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
     if (file) {
-      setIsLoading(true);
       processFile(file);
     }
-  }, []);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      "text/csv": [".csv"],
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [
-        ".xlsx",
-      ],
-      "application/vnd.ms-excel": [".xls"],
-    },
-    multiple: false,
-  });
+  };
 
   return (
-    <div className="w-full max-w-sm mx-auto">
-      <h2 className="text-base text-center mb-1">Upload your files</h2>
-      <p className="text-xs text-gray-500 text-center mb-4">
-        File should be XLS, XLSX, CSV
+    <div className="file-upload-container">
+      <h2 className="upload-title">Upload Your Data</h2>
+      <p className="upload-subtitle">
+        Supported formats: CSV, Excel (.xlsx)
       </p>
       <div
-        {...getRootProps()}
-        className={`relative border-2 border-dashed rounded-lg p-6 transition-all duration-300
-          ${
-            isDragActive
-              ? "border-blue-500 bg-blue-50"
-              : "border-gray-300 hover:border-blue-400"
-          }
-          ${isLoading ? "opacity-50 cursor-wait" : "cursor-pointer"}
-          min-h-[140px] flex flex-col items-center justify-center`}
+        className={`upload-area ${isLoading ? "upload-area-loading" : ""}`}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
       >
-        <input {...getInputProps()} />
-        <div className="text-center space-y-2">
-          {isLoading ? (
-            <div className="flex flex-col items-center space-y-2">
-              <div className="loading-spinner w-6 h-6 border-2"></div>
-              <p className="text-gray-600 text-xs">Processing...</p>
+        <input
+          type="file"
+          accept=".csv,.xlsx"
+          onChange={handleFileSelect}
+          className="file-input"
+        />
+        {isLoading ? (
+          <div className="upload-content">
+            <div className="loading-spinner"></div>
+            <p className="processing-text">Processing your file...</p>
+          </div>
+        ) : (
+          <div className="upload-content">
+            <div className="upload-icon">
+              <svg
+                className="w-12 h-12 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                />
+              </svg>
             </div>
-          ) : (
-            <>
-              <div className="w-10 h-10 mx-auto mb-2">
-                <svg
-                  className="w-full h-full text-blue-500"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M3 15a4 4 0 004 4h10a4 4 0 004-4v-4a4 4 0 00-4-4H7a4 4 0 00-4 4v4z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M12 8v8m0-8l-4 4m4-4l4 4"
-                  />
-                </svg>
-              </div>
-              <p className="text-gray-600 text-xs">
-                {isDragActive
-                  ? "Drop your file here..."
-                  : "Drag & Drop your files here"}
-              </p>
-            </>
-          )}
-        </div>
+            <p className="upload-text">
+              Drag and drop your file here, or click to browse
+            </p>
+            <p className="upload-hint">
+              Supported formats: CSV, Excel (.xlsx)
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

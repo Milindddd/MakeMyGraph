@@ -4,12 +4,24 @@
    Layout
    ========================== */
 .create-graph-container {
+  padding: 1rem;
   min-height: calc(100vh - 64px); /* Subtract navbar height */
   background: linear-gradient(135deg, #fff8f3 0%, #ffede0 100%);
-  padding: var(--spacing-lg);
   display: flex;
   flex-direction: column;
   align-items: center;  
+}
+
+@media (min-width: 640px) {
+  .create-graph-container {
+    padding: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .create-graph-container {
+    padding: 2rem;
+  }
 }
 
 .create-graph-header {
@@ -21,13 +33,7 @@
    Titles
    ========================== */
 .create-graph-title {
-  font-size: 2.5rem;
-  font-weight: 800;
-  color: #1f2937;
-  margin-bottom: var(--spacing-sm);
-  position: relative;
-  padding-bottom: var(--spacing-sm);
-  display: inline-block;
+  @apply text-3xl md:text-4xl lg:text-5xl font-bold text-center mb-8 md:mb-12;
 }
 
 .create-graph-title::after {
@@ -42,10 +48,14 @@
   border-radius: 2px;
 }
 
+.create-graph-content {
+  @apply space-y-6 md:space-y-8;
+}
+
 /* ==========================
    Card/Upload Section
    ========================== */
-.upload-section {
+.create-graph-content {
   background: white;
   border-radius: var(--border-radius-lg);
   padding: var(--spacing-lg);
@@ -58,7 +68,7 @@
   transition: var(--transition-normal);
 }
 
-.upload-section:hover {
+.create-graph-content:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 15px -3px rgba(255, 107, 0, 0.1),
               0 4px 6px -2px rgba(255, 107, 0, 0.05);
@@ -84,14 +94,12 @@
   margin-top: var(--spacing-lg);
 }
 
+.card {
+  @apply p-4 md:p-6 bg-white rounded-lg shadow-md;
+}
+
 .card-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--color-primary-dark);
-  margin-bottom: var(--spacing-md);
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+  @apply text-xl md:text-2xl font-semibold mb-4;
 }
 
 .card-title::before {
@@ -107,26 +115,7 @@
    Form Elements
    ========================== */
 .select-field {
-  width: 100%;
-  padding: var(--spacing-sm) var(--spacing-md);
-  border: 2px solid #ffe4d4;
-  border-radius: var(--border-radius-md);
-  background-color: white;
-  color: #4b5563;
-  font-size: 1rem;
-  font-weight: 500;
-  transition: var(--transition-fast);
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ea580c'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 1rem center;
-  background-size: 1.5em;
-}
-
-.select-field:focus {
-  outline: none;
-  border-color: #ff6b00;
-  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.1);
+  @apply w-full md:w-1/2 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500;
 }
 
 /* ==========================
@@ -173,7 +162,12 @@
 /* ==========================
    Loading Spinner
    ========================== */
+.loading-container {
+  @apply flex items-center justify-center;
+}
+
 .loading-spinner {
+  @apply mr-2;
   width: 1.5rem;
   height: 1.5rem;
   border: 3px solid var(--color-spinner-bg);
@@ -190,7 +184,7 @@
    Responsive Design
    ========================== */
 @media (max-width: 1024px) {
-  .upload-section {
+  .create-graph-container {
     max-width: 95vw;
   }
 }
@@ -204,7 +198,7 @@
     font-size: 2rem;
   }
   
-  .upload-section {
+  .create-graph-content {
     padding: var(--spacing-md);
   }
   
@@ -220,7 +214,7 @@
     padding-bottom: var(--spacing-xs);
   }
   
-  .upload-section {
+  .create-graph-content {
     padding: var(--spacing-sm);
   }
   
@@ -235,4 +229,20 @@
   .file-upload-area {
     padding: var(--spacing-md);
   }
+}
+
+.graph-controls {
+  @apply flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4;
+}
+
+.save-button {
+  @apply btn w-full md:w-auto;
+}
+
+.save-button-secondary {
+  @apply btn-secondary;
+}
+
+.save-button-primary {
+  @apply btn-primary;
 }

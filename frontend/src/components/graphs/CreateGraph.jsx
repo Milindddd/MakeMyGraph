@@ -44,26 +44,20 @@ const CreateGraph = () => {
 
   return (
     <div className="create-graph-container">
-      <div className="container mx-auto max-w-6xl">
-        <h1 className="create-graph-title">
-          Create New Graph
-        </h1>
+      <div className="container">
+        <h1 className="create-graph-title">Create New Graph</h1>
 
-        <div className="space-y-8">
+        <div className="create-graph-content">
           {/* File Upload Section */}
           <div className="card">
-            <h2 className="card-title">
-              Upload Your Data
-            </h2>
+            <h2 className="card-title">Upload Your Data</h2>
             <FileUpload onDataProcessed={handleDataProcessed} />
           </div>
 
           {/* Column Selection */}
           {data && columns.length > 0 && (
             <div className="card">
-              <h2 className="card-title">
-                Select Column to Analyze
-              </h2>
+              <h2 className="card-title">Select Column to Analyze</h2>
               <select
                 value={selectedColumn}
                 onChange={(e) => setSelectedColumn(e.target.value)}
@@ -82,26 +76,28 @@ const CreateGraph = () => {
           {/* Graph Display */}
           {data && selectedColumn && (
             <div className="card">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="card-title">
-                  Graph Visualization
-                </h2>
+              <div className="graph-controls">
+                <h2 className="card-title">Graph Visualization</h2>
                 <button
                   onClick={handleSaveGraph}
                   disabled={isSaving}
-                  className={`btn ${isSaving ? "btn-secondary" : "btn-primary"}`}
+                  className={`save-button ${
+                    isSaving ? "save-button-secondary" : "save-button-primary"
+                  }`}
                 >
                   {isSaving ? (
-                    <div className="flex items-center">
-                      <div className="loading-spinner mr-2"></div>
-                      Saving...
+                    <div className="loading-container">
+                      <div className="loading-spinner"></div>
+                      <span>Saving...</span>
                     </div>
                   ) : (
                     "Save Graph"
                   )}
                 </button>
               </div>
-              <GraphDisplay data={data} selectedColumn={selectedColumn} />
+              <div className="w-full overflow-x-auto">
+                <GraphDisplay data={data} selectedColumn={selectedColumn} />
+              </div>
             </div>
           )}
         </div>
