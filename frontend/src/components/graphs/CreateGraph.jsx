@@ -1,109 +1,198 @@
 import { useState } from "react";
-import { toast } from "react-toastify";
-import FileUpload from "../upload/FileUpload";
-import GraphDisplay from "./GraphDisplay";
-import { saveGraph } from "../../services/mongodb";
+import Papa from "papaparse";
+import * as XLSX from "xlsx";
 import "./CreateGraph.css";
+import GraphDisplay from "./GraphDisplay";
 
 const CreateGraph = () => {
+  const [step, setStep] = useState(1); // 1: Upload, 2: Choose Column, 3: Display
   const [data, setData] = useState(null);
-  const [columns, setColumns] = useState([]);
-  const [selectedColumn, setSelectedColumn] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
+  const [selectedColumn, setSelectedColumn] = useState(null);
+  const [availableColumns, setAvailableColumns] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleDataProcessed = (processedData) => {
-    if (processedData && processedData.length > 0) {
-      setData(processedData);
-      setColumns(Object.keys(processedData[0]));
-      setSelectedColumn("");
-      toast.success("Data loaded successfully!");
+  const steps = [
+    { number: 1, title: "Upload Data", description: "Upload your CSV or Excel file" },
+    { number: 2, title: "Select Column", description: "Choose the column to visualize" },
+    { number: 3, title: "View Graph", description: "View and customize your graph" }
+  ];
+
+  const handleFileUpload = (file) => {
+    setIsLoading(true);
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      try {
+        let parsedData;
+        if (file.type === "text/csv") {
+          Papa.parse(e.target.result, {
+            header: true,
+            complete: (results) => {
+              parsedData = results.data;
+              if (parsedData && parsedData.length > 0) {
+                setData(parsedData);
+                setAvailableColumns(Object.keys(parsedData[0]));
+                setStep(2);
+              }
+              setIsLoading(false);
+            },
+            error: (error) => {
+              console.error("Error parsing CSV:", error);
+              setIsLoading(false);
+            },
+          });
+        } else if (
+          file.type ===
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ) {
+          const workbook = XLSX.read(e.target.result, { type: "array" });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          parsedData = XLSX.utils.sheet_to_json(worksheet);
+          
+          if (parsedData && parsedData.length > 0) {
+            setData(parsedData);
+            setAvailableColumns(Object.keys(parsedData[0]));
+            setStep(2);
+          }
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error("Error processing file:", error);
+        setIsLoading(false);
+      }
+    };
+
+    reader.onerror = () => {
+      console.error("Error reading file");
+      setIsLoading(false);
+    };
+
+    if (file.type === "text/csv") {
+      reader.readAsText(file);
+    } else {
+      reader.readAsArrayBuffer(file);
     }
   };
 
-  const handleSaveGraph = async () => {
-    if (!data || !selectedColumn) {
-      toast.error("Please upload data and select a column first");
-      return;
-    }
+  const handleColumnSelect = (column) => {
+    setSelectedColumn(column);
+    setStep(3);
+  };
 
-    try {
-      setIsSaving(true);
-      await saveGraph({
-        data,
-        selectedColumn,
-        chartType: "bar",
-        name: `${selectedColumn} Analysis`,
-      });
-      toast.success("Graph saved successfully!");
-    } catch (error) {
-      toast.error("Error saving graph: " + error.message);
-    } finally {
-      setIsSaving(false);
+  const handleBack = () => {
+    if (step === 3) {
+      setStep(2);
+    } else if (step === 2) {
+      setStep(1);
     }
+  };
+
+  const handleReset = () => {
+    setStep(1);
+    setData(null);
+    setSelectedColumn(null);
+    setAvailableColumns([]);
   };
 
   return (
     <div className="create-graph-container">
-      <div className="container">
-        <h1 className="create-graph-title">Create New Graph</h1>
-
-        <div className="create-graph-content">
-          {/* File Upload Section */}
-          <div className="card">
-            <h2 className="card-title">Upload Your Data</h2>
-            <FileUpload onDataProcessed={handleDataProcessed} />
+      {/* Step Indicator */}
+      <div className="step-indicator">
+        {steps.map((s, index) => (
+          <div
+            key={s.number}
+            className={`step ${step >= s.number ? 'active' : ''} ${step === s.number ? 'current' : ''}`}
+          >
+            <div className="step-number">{s.number}</div>
+            <div className="step-info">
+              <div className="step-title">{s.title}</div>
+              <div className="step-description">{s.description}</div>
+            </div>
+            {index < steps.length - 1 && <div className="step-connector"></div>}
           </div>
+        ))}
+      </div>
 
-          {/* Column Selection */}
-          {data && columns.length > 0 && (
-            <div className="card">
-              <h2 className="card-title">Select Column to Analyze</h2>
-              <select
-                value={selectedColumn}
-                onChange={(e) => setSelectedColumn(e.target.value)}
-                className="select-field"
-              >
-                <option value="">Select a column...</option>
-                {columns.map((column) => (
-                  <option key={column} value={column}>
-                    {column}
-                  </option>
-                ))}
-              </select>
+      {/* Step Content */}
+      <div className="step-content">
+        {step === 1 && (
+          <div className="upload-section">
+            <h2>Step 1: Upload Your Data</h2>
+            <p>Choose a CSV or Excel file to create your graph</p>
+            <div className="upload-area">
+              <input
+                type="file"
+                accept=".csv,.xlsx"
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    handleFileUpload(file);
+                  }
+                }}
+              />
+              {isLoading ? (
+                <div className="loading-indicator">
+                  <div className="spinner"></div>
+                  <p>Processing your file...</p>
+                </div>
+              ) : (
+                <div className="upload-prompt">
+                  <p>Drag and drop your file here or click to browse</p>
+                  <p className="file-types">Supported formats: CSV, Excel (.xlsx)</p>
+                </div>
+              )}
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Graph Display */}
-          {data && selectedColumn && (
-            <div className="card">
-              <div className="graph-controls">
-                <h2 className="card-title">Graph Visualization</h2>
+        {step === 2 && (
+          <div className="column-selection-section">
+            <h2>Step 2: Choose a Column</h2>
+            <p>Select the column you want to visualize</p>
+            <div className="column-list">
+              {availableColumns.map((column) => (
                 <button
-                  onClick={handleSaveGraph}
-                  disabled={isSaving}
-                  className={`save-button ${
-                    isSaving ? "save-button-secondary" : "save-button-primary"
-                  }`}
+                  key={column}
+                  className={`column-button ${selectedColumn === column ? 'selected' : ''}`}
+                  onClick={() => handleColumnSelect(column)}
                 >
-                  {isSaving ? (
-                    <div className="loading-container">
-                      <div className="loading-spinner"></div>
-                      <span>Saving...</span>
-                    </div>
-                  ) : (
-                    "Save Graph"
-                  )}
+                  {column}
                 </button>
-              </div>
-              <div className="w-full overflow-x-auto">
-                <GraphDisplay data={data} selectedColumn={selectedColumn} />
-              </div>
+              ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="graph-display-section">
+            <h2>Step 3: Your Graph</h2>
+            <GraphDisplay
+              data={data}
+              selectedColumn={selectedColumn}
+              onBack={handleBack}
+              onReset={handleReset}
+              columns={availableColumns}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Navigation Controls */}
+      <div className="navigation-controls">
+        {step > 1 && (
+          <button className="nav-button back" onClick={handleBack}>
+            Back to {steps[step - 2].title}
+          </button>
+        )}
+        {step === 3 && (
+          <button className="nav-button reset" onClick={handleReset}>
+            Start Over with New File
+          </button>
+        )}
       </div>
     </div>
   );
 };
 
-export default CreateGraph;
+export default CreateGraph; 
