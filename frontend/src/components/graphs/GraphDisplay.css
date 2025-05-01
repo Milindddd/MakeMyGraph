@@ -42,16 +42,6 @@
   overflow: hidden;
 }
 
-.chart-container::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(to right, #2196f3, #64b5f6);
-}
-
 .chart-container:hover {
   transform: translateY(-5px);
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
