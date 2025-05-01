@@ -4,83 +4,82 @@ import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import "./GraphDisplay.css";
 
-const GraphDisplay = ({ data, selectedCategoryColumn, selectedValueColumn, chartType }) => {
+const GraphDisplay = ({ data, selectedCategoryColumn, selectedValueColumn, selectedColumn, chartType }) => {
   const [statistics, setStatistics] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState(null);
   const svgRef = useRef();
   const chartContainerRef = useRef();
 
+  // Add logging to check incoming props
+  useEffect(() => {
+    console.log("GraphDisplay Props:", {
+      data,
+      selectedCategoryColumn,
+      selectedValueColumn,
+      selectedColumn,
+      chartType
+    });
+  }, [data, selectedCategoryColumn, selectedValueColumn, selectedColumn, chartType]);
+
   const isNumeric = (value) => {
     return !isNaN(parseFloat(value)) && isFinite(value);
   };
 
   const validateInputs = () => {
-    if (!data || !selectedCategoryColumn || !selectedValueColumn) {
-      setError("No data or columns selected");
+    if (!data || data.length === 0) {
+      setError("No data available");
       return false;
     }
 
-    const values = data.map(item => item[selectedValueColumn]);
-
     switch (chartType) {
-      case "bar":
-        // For bar charts, require at least 2 unique categories
-        const uniqueCategories = new Set(values);
-        if (uniqueCategories.size < 2) {
-          setError("Bar chart needs at least 2 unique categories");
-          return false;
-        }
-        break;
-
-      case "pie":
-        // For pie charts, require 2-8 unique categories
-        const uniquePieCategories = new Set(values);
-        if (uniquePieCategories.size < 2 || uniquePieCategories.size > 8) {
-          setError("Pie chart needs 2-8 unique categories");
-          return false;
-        }
-        break;
-
-      case "line":
-      case "scatter":
       case "histogram":
-      case "box":
-        // For these, require numeric values
-        const numericValues = values.map(val => {
-          if (typeof val === 'string') {
-            return parseFloat(val.replace(/[^0-9.-]/g, ''));
-          }
-          return parseFloat(val);
-        }).filter(val => !isNaN(val));
-        if (chartType === 'line' || chartType === 'scatter') {
-          if (numericValues.length < 2) {
-            setError(`${chartType.charAt(0).toUpperCase() + chartType.slice(1)} chart needs at least 2 numeric values`);
-            return false;
-          }
-        } else if (chartType === 'histogram' && numericValues.length < 30) {
-          setError("Histogram needs at least 30 numeric values");
-          return false;
-        } else if (chartType === 'box' && numericValues.length < 20) {
-          setError("Box plot needs at least 20 numeric values");
+        if (!selectedColumn) {
+          setError("No column selected for histogram");
           return false;
         }
-        break;
+        const histogramValues = data.map(row => row[selectedColumn]).filter(isNumeric);
+        if (histogramValues.length === 0) {
+          setError(`No numeric values found in column: ${selectedColumn}`);
+          return false;
+        }
+        console.log("Histogram values:", histogramValues);
+        return true;
+
+      case "bar":
+      case "line":
+      case "pie":
+        if (!selectedCategoryColumn || !selectedValueColumn) {
+          setError("Both category and value columns must be selected");
+          return false;
+        }
+        return true;
+
+      case "scatter":
+        if (!selectedCategoryColumn || !selectedValueColumn) {
+          setError("Both X and Y columns must be selected");
+          return false;
+        }
+        return true;
+
+      case "box":
+        if (!selectedColumn) {
+          setError("No column selected for box plot");
+          return false;
+        }
+        return true;
 
       default:
-        setError("Unknown chart type");
+        setError("Invalid chart type");
         return false;
     }
-
-    setError(null);
-    return true;
   };
 
   useEffect(() => {
-    if (data && selectedCategoryColumn && selectedValueColumn) {
+    if (data && validateInputs()) {
       calculateStatistics();
     }
-  }, [data, selectedCategoryColumn, selectedValueColumn]);
+  }, [data, selectedCategoryColumn, selectedValueColumn, selectedColumn, chartType]);
 
   useEffect(() => {
     if (statistics && svgRef.current) {
@@ -91,9 +90,31 @@ const GraphDisplay = ({ data, selectedCategoryColumn, selectedValueColumn, chart
   }, [statistics, chartType]);
 
   const calculateStatistics = () => {
-    if (!data || !selectedCategoryColumn || !selectedValueColumn) return;
+    console.log("Calculating statistics for chart type:", chartType);
+    
+    if (chartType === "histogram" || chartType === "box") {
+      // For histogram and box plot, we need all numeric values from the selected column
+      const values = data
+        .map(row => parseFloat(row[selectedColumn]))
+        .filter(value => !isNaN(value));
 
-    if (chartType === "scatter") {
+      console.log("Numeric values:", values);
+
+      if (values.length === 0) {
+        setError("No valid numeric values found in the selected column");
+        return;
+      }
+
+      setStatistics({
+        values,
+        statistics: {
+          mean: d3.mean(values),
+          median: d3.median(values),
+          min: d3.min(values),
+          max: d3.max(values),
+        }
+      });
+    } else if (chartType === "scatter") {
       // For scatter plot, we need pairs of X and Y values
       const scatterData = data.map(row => ({
         x: parseFloat(row[selectedCategoryColumn]),
@@ -133,44 +154,30 @@ const GraphDisplay = ({ data, selectedCategoryColumn, selectedValueColumn, chart
         .map((row) => parseFloat(row[selectedValueColumn]))
         .filter((v) => !isNaN(v));
 
-      const sortedValues = [...numericValues].sort((a, b) => a - b);
-      const sum = sortedValues.reduce((a, b) => a + b, 0);
-      const mean = sum / sortedValues.length;
-      const median = sortedValues[Math.floor(sortedValues.length / 2)];
-      const min = sortedValues[0];
-      const max = sortedValues[sortedValues.length - 1];
-      const q1 = sortedValues[Math.floor(sortedValues.length * 0.25)];
-      const q3 = sortedValues[Math.floor(sortedValues.length * 0.75)];
-      const iqr = q3 - q1;
-      const lowerWhisker = Math.max(min, q1 - 1.5 * iqr);
-      const upperWhisker = Math.min(max, q3 + 1.5 * iqr);
-
-    setStatistics({
+      setStatistics({
         values: numericValues,
         chartData,
         statistics: {
-          mean,
-          median,
-          min,
-          max,
-          q1,
-          q3,
-          iqr,
-          lowerWhisker,
-          upperWhisker,
+          mean: d3.mean(numericValues),
+          median: d3.median(numericValues),
+          min: d3.min(numericValues),
+          max: d3.max(numericValues),
         },
       });
     }
   };
 
   const drawChart = () => {
+    console.log("Drawing chart:", chartType);
+    console.log("Current statistics:", statistics);
+
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
 
     const containerWidth = chartContainerRef.current.clientWidth;
     const containerHeight = chartContainerRef.current.clientHeight;
     
-    const margin = { top: 20, right: 20, bottom: 30, left: 40 };
+    const margin = { top: 60, right: 20, bottom: 50, left: 60 };
     const width = containerWidth - margin.left - margin.right;
     const height = containerHeight - margin.top - margin.bottom;
 
@@ -190,43 +197,53 @@ const GraphDisplay = ({ data, selectedCategoryColumn, selectedValueColumn, chart
   };
 
   const drawBarChart = (data, svg, width, height) => {
-    const margin = { top: 20, right: 20, bottom: 30, left: 40 };
+    const margin = { top: 60, right: 20, bottom: 50, left: 60 };
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
 
-    const x = d3
-      .scaleBand()
-      .domain(data.map((d) => d.label))
-      .range([0, innerWidth])
-      .padding(0.1);
-
-    const y = d3
-      .scaleLinear()
-      .domain([0, d3.max(data, (d) => d.value)])
-      .range([innerHeight, 0]);
+    // Clear any existing content
+    svg.selectAll("*").remove();
 
     const g = svg
       .append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`);
 
+    // Create scales
+    const x = d3
+      .scaleBand()
+      .domain(data.map((d) => d.label))
+      .range([0, innerWidth])
+      .padding(0.2);
+
+    const y = d3
+      .scaleLinear()
+      .domain([0, d3.max(data, (d) => d.value)])
+      .range([innerHeight, 0])
+      .nice();
+
+    // Add X axis
     g.append("g")
       .attr("class", "axis axis--x")
       .attr("transform", `translate(0,${innerHeight})`)
       .call(d3.axisBottom(x))
       .selectAll("text")
       .attr("transform", "rotate(-45)")
-      .style("text-anchor", "end");
+      .style("text-anchor", "end")
+      .style("font-size", "12px");
 
+    // Add Y axis
     g.append("g")
       .attr("class", "axis axis--y")
       .call(d3.axisLeft(y))
       .append("text")
       .attr("transform", "rotate(-90)")
-      .attr("y", 6)
+      .attr("y", -50)
       .attr("dy", ".71em")
       .style("text-anchor", "end")
+      .style("font-size", "14px")
       .text(selectedValueColumn);
 
+    // Add bars
     g.selectAll(".bar")
       .data(data)
       .enter()
@@ -236,17 +253,49 @@ const GraphDisplay = ({ data, selectedCategoryColumn, selectedValueColumn, chart
       .attr("y", (d) => y(d.value))
       .attr("width", x.bandwidth())
       .attr("height", (d) => innerHeight - y(d.value))
-      .attr("fill", "#4CAF50");
+      .attr("fill", "#2196F3")
+      .attr("rx", 4) // Rounded corners
+      .on("mouseover", function(event, d) {
+        d3.select(this)
+          .attr("fill", "#1976D2");
+        
+        // Add tooltip
+        g.append("text")
+          .attr("class", "tooltip")
+          .attr("x", x(d.label) + x.bandwidth() / 2)
+          .attr("y", y(d.value) - 10)
+          .attr("text-anchor", "middle")
+          .style("font-size", "12px")
+          .style("font-weight", "bold")
+          .text(d.value);
+      })
+      .on("mouseout", function() {
+        d3.select(this)
+          .attr("fill", "#2196F3");
+        
+        // Remove tooltip
+        g.selectAll(".tooltip").remove();
+      });
 
+    // Add title
     g.append("text")
       .attr("x", innerWidth / 2)
-      .attr("y", -10)
-      .style("text-anchor", "middle")
-      .text(selectedCategoryColumn);
+      .attr("y", -40)
+      .attr("text-anchor", "middle")
+      .style("font-size", "16px")
+      .style("font-weight", "bold")
+      .text(`${selectedValueColumn} by ${selectedCategoryColumn}`);
   };
 
   const drawPieChart = (data, svg, width, height) => {
-    const radius = Math.min(width, height) / 2;
+    const margin = { top: 60, right: 20, bottom: 50, left: 60 };
+    const innerWidth = width - margin.left - margin.right;
+    const innerHeight = height - margin.top - margin.bottom;
+    const radius = Math.min(innerWidth, innerHeight) / 2;
+
+    // Clear any existing content
+    svg.selectAll("*").remove();
+
     const g = svg
       .append("g")
       .attr("transform", `translate(${width / 2},${height / 2})`);
@@ -272,7 +321,29 @@ const GraphDisplay = ({ data, selectedCategoryColumn, selectedValueColumn, chart
     arcs
       .append("path")
       .attr("d", arc)
-      .attr("fill", (d, i) => color(i));
+      .attr("fill", (d, i) => color(i))
+      .on("mouseover", function(event, d) {
+        d3.select(this)
+          .attr("stroke", "#1976D2")
+          .attr("stroke-width", 2);
+        
+        // Add tooltip
+        g.append("text")
+          .attr("class", "tooltip")
+          .attr("x", 0)
+          .attr("y", -radius - 20)
+          .attr("text-anchor", "middle")
+          .style("font-size", "12px")
+          .style("font-weight", "bold")
+          .text(`${d.data.label}: ${d.data.value}`);
+      })
+      .on("mouseout", function() {
+        d3.select(this)
+          .attr("stroke", "none");
+        
+        // Remove tooltip
+        g.selectAll(".tooltip").remove();
+      });
 
     const total = data.reduce((sum, d) => sum + d.value, 0);
     arcs
@@ -285,19 +356,21 @@ const GraphDisplay = ({ data, selectedCategoryColumn, selectedValueColumn, chart
       .style("text-anchor", "middle")
       .text((d) => {
         const percentage = ((d.data.value / total) * 100).toFixed(1);
-        return `${d.data.label} (${percentage}%)`;
+        return `${percentage}%`;
       });
 
-    // Add a title
+    // Add title
     svg.append("text")
       .attr("x", width / 2)
       .attr("y", 20)
-      .style("text-anchor", "middle")
-      .text(`${selectedCategoryColumn} Distribution`);
+      .attr("text-anchor", "middle")
+      .style("font-size", "16px")
+      .style("font-weight", "bold")
+      .text(`${selectedValueColumn} by ${selectedCategoryColumn}`);
   };
 
   const drawLineChart = (data, svg, width, height) => {
-    const margin = { top: 20, right: 20, bottom: 30, left: 40 };
+    const margin = { top: 60, right: 20, bottom: 50, left: 60 };
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
 
@@ -328,7 +401,8 @@ const GraphDisplay = ({ data, selectedCategoryColumn, selectedValueColumn, chart
       .call(d3.axisBottom(x))
       .selectAll("text")
       .attr("transform", "rotate(-45)")
-      .style("text-anchor", "end");
+      .style("text-anchor", "end")
+      .style("font-size", "12px");
 
     // Add Y axis
     g.append("g")
@@ -336,12 +410,13 @@ const GraphDisplay = ({ data, selectedCategoryColumn, selectedValueColumn, chart
       .call(d3.axisLeft(y))
       .append("text")
       .attr("transform", "rotate(-90)")
-      .attr("y", 6)
+      .attr("y", -50)
       .attr("dy", ".71em")
       .style("text-anchor", "end")
+      .style("font-size", "14px")
       .text(selectedValueColumn);
 
-    // Create the line generator
+    // Create the line
     const line = d3.line()
       .x(d => x(d.label))
       .y(d => y(d.value))
@@ -356,7 +431,7 @@ const GraphDisplay = ({ data, selectedCategoryColumn, selectedValueColumn, chart
       .attr("stroke-width", 2)
       .attr("d", line);
 
-    // Add dots for each data point
+    // Add dots
     g.selectAll(".dot")
       .data(data)
       .enter()
@@ -365,18 +440,43 @@ const GraphDisplay = ({ data, selectedCategoryColumn, selectedValueColumn, chart
       .attr("cx", d => x(d.label))
       .attr("cy", d => y(d.value))
       .attr("r", 5)
-      .attr("fill", "#2196F3");
+      .attr("fill", "#2196F3")
+      .on("mouseover", function(event, d) {
+        d3.select(this)
+          .attr("r", 7)
+          .attr("fill", "#1976D2");
+        
+        // Add tooltip
+        g.append("text")
+          .attr("class", "tooltip")
+          .attr("x", x(d.label))
+          .attr("y", y(d.value) - 10)
+          .attr("text-anchor", "middle")
+          .style("font-size", "12px")
+          .style("font-weight", "bold")
+          .text(d.value);
+      })
+      .on("mouseout", function() {
+        d3.select(this)
+          .attr("r", 5)
+          .attr("fill", "#2196F3");
+        
+        // Remove tooltip
+        g.selectAll(".tooltip").remove();
+      });
 
     // Add title
     g.append("text")
       .attr("x", innerWidth / 2)
-      .attr("y", -10)
-      .style("text-anchor", "middle")
-      .text(selectedCategoryColumn);
+      .attr("y", -40)
+      .attr("text-anchor", "middle")
+      .style("font-size", "16px")
+      .style("font-weight", "bold")
+      .text(`${selectedValueColumn} by ${selectedCategoryColumn}`);
   };
 
   const drawScatterPlot = (data, svg, width, height) => {
-    const margin = { top: 20, right: 20, bottom: 30, left: 40 };
+    const margin = { top: 60, right: 20, bottom: 50, left: 60 };
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
 
@@ -409,6 +509,7 @@ const GraphDisplay = ({ data, selectedCategoryColumn, selectedValueColumn, chart
       .attr("x", innerWidth)
       .attr("y", -6)
       .style("text-anchor", "end")
+      .style("font-size", "14px")
       .text(selectedCategoryColumn);
 
     // Add Y axis
@@ -417,9 +518,10 @@ const GraphDisplay = ({ data, selectedCategoryColumn, selectedValueColumn, chart
       .call(d3.axisLeft(y))
       .append("text")
       .attr("transform", "rotate(-90)")
-      .attr("y", 6)
+      .attr("y", -50)
       .attr("dy", ".71em")
       .style("text-anchor", "end")
+      .style("font-size", "14px")
       .text(selectedValueColumn);
 
     // Add dots
@@ -431,92 +533,207 @@ const GraphDisplay = ({ data, selectedCategoryColumn, selectedValueColumn, chart
       .attr("cx", d => x(d.x))
       .attr("cy", d => y(d.y))
       .attr("r", 5)
-      .attr("fill", "#2196F3");
+      .attr("fill", "#2196F3")
+      .on("mouseover", function(event, d) {
+        d3.select(this)
+          .attr("r", 7)
+          .attr("fill", "#1976D2");
+        
+        // Add tooltip
+        g.append("text")
+          .attr("class", "tooltip")
+          .attr("x", x(d.x))
+          .attr("y", y(d.y) - 10)
+          .attr("text-anchor", "middle")
+          .style("font-size", "12px")
+          .style("font-weight", "bold")
+          .text(`(${d.x.toFixed(2)}, ${d.y.toFixed(2)})`);
+      })
+      .on("mouseout", function() {
+        d3.select(this)
+          .attr("r", 5)
+          .attr("fill", "#2196F3");
+        
+        // Remove tooltip
+        g.selectAll(".tooltip").remove();
+      });
 
     // Add title
     g.append("text")
       .attr("x", innerWidth / 2)
-      .attr("y", -10)
-      .style("text-anchor", "middle")
+      .attr("y", -40)
+      .attr("text-anchor", "middle")
+      .style("font-size", "16px")
+      .style("font-weight", "bold")
       .text(`${selectedValueColumn} vs ${selectedCategoryColumn}`);
   };
 
   const drawHistogram = (svg, stats, width, height, margin) => {
+    if (!stats || !stats.values || stats.values.length === 0) {
+      console.error("No valid data for histogram");
+      return;
+    }
+
+    // Clear any existing content
+    svg.selectAll("*").remove();
+
     const g = svg
       .append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`);
 
-    const histogram = d3
-      .histogram()
-      .value((d) => d)
-      .domain([0, d3.max(stats.values)])
-      .thresholds(20);
+    // Get the data values
+    const values = stats.values;
+    
+    // Create bins using d3.histogram
+    const histogram = d3.histogram()
+      .value(d => d)
+      .domain([d3.min(values), d3.max(values)])
+      .thresholds(20); // Number of bins
 
-    const bins = histogram(stats.values);
+    const bins = histogram(values);
 
-    const x = d3
-      .scaleLinear()
-      .domain([0, d3.max(stats.values)])
-      .range([0, width]);
+    // Create scales
+    const x = d3.scaleLinear()
+      .domain([d3.min(values), d3.max(values)])
+      .range([0, width - margin.left - margin.right])
+      .nice();
 
-    const y = d3
-      .scaleLinear()
-      .domain([0, d3.max(bins, (d) => d.length)])
-      .range([height, 0]);
+    const y = d3.scaleLinear()
+      .domain([0, d3.max(bins, d => d.length)])
+      .range([height - margin.top - margin.bottom, 0])
+      .nice();
 
+    // Add X axis
     g.append("g")
       .attr("class", "axis axis--x")
-      .attr("transform", `translate(0,${height})`)
-      .call(d3.axisBottom(x));
+      .attr("transform", `translate(0,${height - margin.top - margin.bottom})`)
+      .call(d3.axisBottom(x))
+      .append("text")
+      .attr("x", width - margin.left - margin.right)
+      .attr("y", -6)
+      .style("text-anchor", "end")
+      .style("font-size", "14px")
+      .text(selectedColumn);
 
+    // Add Y axis
     g.append("g")
       .attr("class", "axis axis--y")
-      .call(d3.axisLeft(y));
+      .call(d3.axisLeft(y))
+      .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", -50)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .style("font-size", "14px")
+      .text("Frequency");
 
+    // Add bars
     g.selectAll(".bar")
       .data(bins)
       .enter()
       .append("rect")
       .attr("class", "bar")
-      .attr("x", (d) => x(d.x0))
-      .attr("y", (d) => y(d.length))
-      .attr("width", (d) => x(d.x1) - x(d.x0) - 1)
-      .attr("height", (d) => height - y(d.length))
-      .attr("fill", "#2196f3");
+      .attr("x", d => x(d.x0))
+      .attr("y", d => y(d.length))
+      .attr("width", d => x(d.x1) - x(d.x0) - 1)
+      .attr("height", d => height - margin.top - margin.bottom - y(d.length))
+      .attr("fill", "#2196F3")
+      .attr("rx", 4) // Rounded corners
+      .on("mouseover", function(event, d) {
+        d3.select(this)
+          .attr("fill", "#1976D2");
+        
+        // Add tooltip
+        g.append("text")
+          .attr("class", "tooltip")
+          .attr("x", x(d.x0) + (x(d.x1) - x(d.x0)) / 2)
+          .attr("y", y(d.length) - 10)
+          .attr("text-anchor", "middle")
+          .style("font-size", "12px")
+          .style("font-weight", "bold")
+          .text(d.length);
+      })
+      .on("mouseout", function() {
+        d3.select(this)
+          .attr("fill", "#2196F3");
+        
+        // Remove tooltip
+        g.selectAll(".tooltip").remove();
+      });
 
+    // Add title
     g.append("text")
-      .attr("transform", `translate(${width / 2},${height + margin.bottom})`)
-      .style("text-anchor", "middle")
-      .text(selectedValueColumn);
-
-    g.append("text")
-      .attr("transform", "rotate(-90)")
-      .attr("y", 0 - margin.left)
-      .attr("x", 0 - height / 2)
-      .attr("dy", "1em")
-      .style("text-anchor", "middle")
-      .text("Frequency");
+      .attr("x", (width - margin.left - margin.right) / 2)
+      .attr("y", -40)
+      .attr("text-anchor", "middle")
+      .style("font-size", "16px")
+      .style("font-weight", "bold")
+      .text(`Distribution of ${selectedColumn}`);
   };
 
   const drawBoxPlot = (svg, stats, width, height, margin) => {
+    if (!stats || !stats.values || stats.values.length === 0) {
+      console.error("No valid data for box plot");
+      return;
+    }
+
+    // Clear any existing content
+    svg.selectAll("*").remove();
+
     const g = svg
       .append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`);
 
-    const sortedValues = [...stats.values].sort((a, b) => a - b);
+    const innerWidth = width - margin.left - margin.right;
+    const innerHeight = height - margin.top - margin.bottom;
+
+    // Calculate statistics
+    const values = stats.values;
+    const sortedValues = [...values].sort((a, b) => a - b);
     const q1 = d3.quantile(sortedValues, 0.25);
+    const median = d3.quantile(sortedValues, 0.5);
     const q3 = d3.quantile(sortedValues, 0.75);
     const iqr = q3 - q1;
     const min = Math.max(q1 - 1.5 * iqr, sortedValues[0]);
     const max = Math.min(q3 + 1.5 * iqr, sortedValues[sortedValues.length - 1]);
 
+    // Create scales
     const y = d3
       .scaleLinear()
       .domain([min - iqr, max + iqr])
-      .range([height, 0]);
+      .range([innerHeight, 0])
+      .nice();
 
-    const boxWidth = 50;
-    const centerX = width / 2;
+    const x = d3
+      .scaleBand()
+      .domain([selectedColumn])
+      .range([0, innerWidth])
+      .padding(0.3);
+
+    // Add Y axis
+    g.append("g")
+      .attr("class", "axis axis--y")
+      .call(d3.axisLeft(y))
+      .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", -50)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .style("font-size", "14px")
+      .text(selectedColumn);
+
+    // Add X axis
+    g.append("g")
+      .attr("class", "axis axis--x")
+      .attr("transform", `translate(0,${innerHeight})`)
+      .call(d3.axisBottom(x))
+      .selectAll("text")
+      .style("text-anchor", "middle")
+      .style("font-size", "14px");
+
+    // Draw the box
+    const boxWidth = x.bandwidth();
+    const centerX = x(selectedColumn) + boxWidth / 2;
 
     // Draw whiskers
     g.append("line")
@@ -524,7 +741,7 @@ const GraphDisplay = ({ data, selectedCategoryColumn, selectedValueColumn, chart
       .attr("x2", centerX)
       .attr("y1", y(min))
       .attr("y2", y(max))
-      .attr("stroke", "#2196f3")
+      .attr("stroke", "#2196F3")
       .attr("stroke-width", 2);
 
     // Draw box
@@ -533,52 +750,165 @@ const GraphDisplay = ({ data, selectedCategoryColumn, selectedValueColumn, chart
       .attr("y", y(q3))
       .attr("width", boxWidth)
       .attr("height", y(q1) - y(q3))
-      .attr("fill", "#2196f3")
-      .attr("stroke", "#2196f3")
-      .attr("stroke-width", 2);
+      .attr("fill", "#2196F3")
+      .attr("stroke", "#1976D2")
+      .attr("stroke-width", 2)
+      .attr("rx", 4);
 
     // Draw median line
     g.append("line")
       .attr("x1", centerX - boxWidth / 2)
       .attr("x2", centerX + boxWidth / 2)
-      .attr("y1", y(parseFloat(stats.median)))
-      .attr("y2", y(parseFloat(stats.median)))
+      .attr("y1", y(median))
+      .attr("y2", y(median))
       .attr("stroke", "white")
       .attr("stroke-width", 2);
 
-    // Add y-axis
-    g.append("g")
-      .attr("class", "axis axis--y")
-      .call(d3.axisLeft(y));
+    // Add outliers
+    const outliers = values.filter(d => d < min || d > max);
+    g.selectAll(".outlier")
+      .data(outliers)
+      .enter()
+      .append("circle")
+      .attr("class", "outlier")
+      .attr("cx", centerX)
+      .attr("cy", d => y(d))
+      .attr("r", 4)
+      .attr("fill", "#f44336")
+      .attr("stroke", "#d32f2f")
+      .attr("stroke-width", 1);
 
     // Add title
     g.append("text")
-      .attr("x", centerX)
-      .attr("y", -10)
+      .attr("x", innerWidth / 2)
+      .attr("y", -40)
       .attr("text-anchor", "middle")
-      .text(selectedValueColumn);
+      .style("font-size", "16px")
+      .style("font-weight", "bold")
+      .text(`Box Plot of ${selectedColumn}`);
+
+    // Add statistics tooltip
+    const tooltip = g.append("g")
+      .attr("class", "tooltip")
+      .style("opacity", 0);
+
+    tooltip.append("rect")
+      .attr("width", 200)
+      .attr("height", 100)
+      .attr("fill", "white")
+      .attr("stroke", "#2196F3")
+      .attr("rx", 4);
+
+    tooltip.append("text")
+      .attr("x", 10)
+      .attr("y", 20)
+      .text(`Min: ${min.toFixed(2)}`);
+
+    tooltip.append("text")
+      .attr("x", 10)
+      .attr("y", 40)
+      .text(`Q1: ${q1.toFixed(2)}`);
+
+    tooltip.append("text")
+      .attr("x", 10)
+      .attr("y", 60)
+      .text(`Median: ${median.toFixed(2)}`);
+
+    tooltip.append("text")
+      .attr("x", 10)
+      .attr("y", 80)
+      .text(`Q3: ${q3.toFixed(2)}`);
+
+    tooltip.append("text")
+      .attr("x", 10)
+      .attr("y", 100)
+      .text(`Max: ${max.toFixed(2)}`);
+
+    // Add hover interaction
+    g.append("rect")
+      .attr("x", centerX - boxWidth / 2)
+      .attr("y", y(max))
+      .attr("width", boxWidth)
+      .attr("height", y(min) - y(max))
+      .attr("fill", "transparent")
+      .on("mouseover", function() {
+        tooltip
+          .attr("transform", `translate(${centerX + 20},${y(median) - 50})`)
+          .style("opacity", 1);
+      })
+      .on("mouseout", function() {
+        tooltip.style("opacity", 0);
+      });
   };
 
   const downloadChart = async (format) => {
     setIsExporting(true);
     try {
-      const chartElement = document.getElementById("chart-container");
-      const canvas = await html2canvas(chartElement);
+      // Get the SVG element
+      const svgElement = svgRef.current;
+      if (!svgElement) {
+        throw new Error("No chart to export");
+      }
+
+      // Create a clone of the SVG
+      const svgData = new XMLSerializer().serializeToString(svgElement);
+      const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+      const svgUrl = URL.createObjectURL(svgBlob);
+
+      // Create a canvas element
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      
+      // Set canvas dimensions to match SVG
+      canvas.width = svgElement.clientWidth;
+      canvas.height = svgElement.clientHeight;
+
+      // Create an image element
+      const img = new Image();
+      
+      // Wait for the image to load
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = svgUrl;
+      });
+
+      // Draw the image on canvas
+      ctx.drawImage(img, 0, 0);
 
       if (format === "png" || format === "jpeg") {
+        // Create download link for PNG/JPEG
         const link = document.createElement("a");
         link.download = `chart.${format}`;
         link.href = canvas.toDataURL(`image/${format}`);
         link.click();
       } else if (format === "pdf") {
-        const imgData = canvas.toDataURL("image/png");
-        const pdf = new jsPDF();
-        const imgProps = pdf.getImageProperties(imgData);
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-        pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+        // Create PDF
+        const pdf = new jsPDF({
+          orientation: "landscape",
+          unit: "px",
+          format: [canvas.width, canvas.height]
+        });
+        
+        // Add the image to PDF
+        pdf.addImage(
+          canvas.toDataURL("image/png"),
+          "PNG",
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        );
+        
+        // Save the PDF
         pdf.save("chart.pdf");
       }
+
+      // Clean up
+      URL.revokeObjectURL(svgUrl);
+    } catch (error) {
+      console.error("Error exporting chart:", error);
+      setError("Failed to export chart. Please try again.");
     } finally {
       setIsExporting(false);
     }
@@ -598,7 +928,12 @@ const GraphDisplay = ({ data, selectedCategoryColumn, selectedValueColumn, chart
               <div className="loading-spinner"></div>
             </div>
           )}
-          <svg ref={svgRef} width="100%" height="100%"></svg>
+          <svg 
+            ref={svgRef} 
+            width="100%" 
+            height="100%"
+            style={{ backgroundColor: "white" }}
+          ></svg>
         </div>
       </div>
 
@@ -606,32 +941,32 @@ const GraphDisplay = ({ data, selectedCategoryColumn, selectedValueColumn, chart
         <h3>Export Chart</h3>
         <p>Download your chart in different formats</p>
         <div className="export-buttons">
-              <button
-                onClick={() => downloadChart("png")}
+          <button
+            onClick={() => downloadChart("png")}
             disabled={isExporting || error}
             className="export-button"
-              >
+          >
             <span className="export-icon">📷</span>
-                PNG
-              </button>
-              <button
-                onClick={() => downloadChart("jpeg")}
+            PNG
+          </button>
+          <button
+            onClick={() => downloadChart("jpeg")}
             disabled={isExporting || error}
             className="export-button"
-              >
+          >
             <span className="export-icon">🖼️</span>
-                JPEG
-              </button>
-              <button
-                onClick={() => downloadChart("pdf")}
+            JPEG
+          </button>
+          <button
+            onClick={() => downloadChart("pdf")}
             disabled={isExporting || error}
             className="export-button"
-              >
+          >
             <span className="export-icon">📄</span>
-                PDF
-              </button>
-            </div>
-          </div>
+            PDF
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

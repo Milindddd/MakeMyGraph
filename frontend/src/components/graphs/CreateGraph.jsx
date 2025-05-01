@@ -224,7 +224,7 @@ const CreateGraph = () => {
     switch (type) {
       case "bar":
         return Object.values(columnTypes).some(
-          (col) => col.totalValues >= 2 && !col.isNumeric
+          (col) => col.totalValues > 0
         );
       case "line":
         return Object.values(columnTypes).some(
@@ -237,13 +237,9 @@ const CreateGraph = () => {
       case "scatter":
         return Object.values(columnTypes).some((col) => col.isNumeric);
       case "histogram":
-        return Object.values(columnTypes).some(
-          (col) => col.isNumeric && col.totalValues >= 30
-        );
+        return Object.values(columnTypes).some((col) => col.isNumeric);
       case "box":
-        return Object.values(columnTypes).some(
-          (col) => col.isNumeric && col.totalValues >= 20
-        );
+        return Object.values(columnTypes).some((col) => col.isNumeric);
       default:
         return false;
     }
@@ -254,7 +250,7 @@ const CreateGraph = () => {
 
     switch (type) {
       case "bar":
-        return "No categorical columns with 2+ values found";
+        return "No columns with values found";
       case "line":
         return "No numeric or date columns found";
       case "pie":
@@ -262,9 +258,9 @@ const CreateGraph = () => {
       case "scatter":
         return "No numeric columns found";
       case "histogram":
-        return "No numeric columns with 30+ values found";
+        return "No numeric columns found";
       case "box":
-        return "No numeric columns with 20+ values found";
+        return "No numeric columns found";
       default:
         return "Chart type not available";
     }
@@ -273,9 +269,19 @@ const CreateGraph = () => {
   const getColumnValidity = (header, type) => {
     switch (chartType) {
       case "bar":
+        // For bar charts, require a category column and numeric values
+        if (type.isNumeric) {
+          return type.totalValues > 0; // Valid value column
+        } else {
+          return type.totalValues > 0; // Valid category column
+        }
       case "line":
-        // For bar and line charts, both columns can be numeric
-        return type.totalValues > 0;
+        // For line charts, require a category column and numeric values
+        if (type.isNumeric) {
+          return type.totalValues > 0; // Valid value column
+        } else {
+          return type.totalValues > 0; // Valid category column
+        }
       case "pie":
         if (type.isNumeric) {
           return type.totalValues > 0; // Valid value column
@@ -285,11 +291,9 @@ const CreateGraph = () => {
       case "scatter":
         return type.totalValues > 0 && type.isNumeric; // Both columns must be numeric
       case "histogram":
-        // Histogram requires a numeric column with at least 30 values
-        return type.totalValues >= 30 && type.isNumeric;
+        return type.isNumeric; // Only requires numeric type
       case "box":
-        // Box plot requires a numeric column with at least 20 values
-        return type.totalValues >= 20 && type.isNumeric;
+        return type.isNumeric; // Only requires numeric type
       default:
         return false;
     }
@@ -298,16 +302,17 @@ const CreateGraph = () => {
   const getColumnDescription = () => {
     switch (chartType) {
       case "bar":
+        return "Select a category column and a numeric value column";
       case "line":
-        return "Select any two columns (both can be numeric)";
+        return "Select a category column and a numeric value column";
       case "pie":
         return "Select a category column and a numeric value column";
       case "scatter":
         return "Select X and Y columns (both must be numeric)";
       case "histogram":
-        return "Select a numeric column (at least 30 values)";
+        return "Select a numeric column";
       case "box":
-        return "Select a numeric column (at least 20 values)";
+        return "Select a numeric column";
       default:
         return "";
     }
@@ -316,13 +321,13 @@ const CreateGraph = () => {
   const renderColumnSelection = () => {
     if (!columnTypes || !headers) return null;
 
-    if (chartType === "bar" || chartType === "line" || chartType === "pie") {
+    if (chartType === "bar") {
       return (
         <>
-          <p>Select columns for the {chartType} chart:</p>
+          <p>Select columns for the bar chart:</p>
           <div className="column-dropdowns">
             <div>
-              <label>Category/X-Axis Column:</label>
+              <label>Category Column:</label>
               <select 
                 value={selectedCategoryColumn} 
                 onChange={e => setSelectedCategoryColumn(e.target.value)}
@@ -334,13 +339,79 @@ const CreateGraph = () => {
               </select>
             </div>
             <div>
-              <label>Value/Y-Axis Column:</label>
+              <label>Value Column:</label>
               <select 
                 value={selectedValueColumn} 
                 onChange={e => setSelectedValueColumn(e.target.value)}
               >
                 <option value="">Select...</option>
+                {headers.filter(h => columnTypes[h].isNumeric).map(h => (
+                  <option key={h} value={h}>{h}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          {error && <div className="error-message">{error}</div>}
+        </>
+      );
+    } else if (chartType === "line") {
+      return (
+        <>
+          <p>Select columns for the line chart:</p>
+          <div className="column-dropdowns">
+            <div>
+              <label>Category Column:</label>
+              <select 
+                value={selectedCategoryColumn} 
+                onChange={e => setSelectedCategoryColumn(e.target.value)}
+              >
+                <option value="">Select...</option>
                 {headers.map(h => (
+                  <option key={h} value={h}>{h}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label>Value Column:</label>
+              <select 
+                value={selectedValueColumn} 
+                onChange={e => setSelectedValueColumn(e.target.value)}
+              >
+                <option value="">Select...</option>
+                {headers.filter(h => columnTypes[h].isNumeric).map(h => (
+                  <option key={h} value={h}>{h}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          {error && <div className="error-message">{error}</div>}
+        </>
+      );
+    } else if (chartType === "pie") {
+      return (
+        <>
+          <p>Select columns for the pie chart:</p>
+          <div className="column-dropdowns">
+            <div>
+              <label>Category Column:</label>
+              <select 
+                value={selectedCategoryColumn} 
+                onChange={e => setSelectedCategoryColumn(e.target.value)}
+              >
+                <option value="">Select...</option>
+                {headers.map(h => (
+                  <option key={h} value={h}>{h}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label>Value Column:</label>
+              <select 
+                value={selectedValueColumn} 
+                onChange={e => setSelectedValueColumn(e.target.value)}
+              >
+                <option value="">Select...</option>
+                {headers.filter(h => columnTypes[h].isNumeric).map(h => (
                   <option key={h} value={h}>{h}</option>
                 ))}
               </select>
@@ -385,7 +456,7 @@ const CreateGraph = () => {
     } else if (chartType === "histogram" || chartType === "box") {
       return (
         <>
-          <p>Select a numeric column ({chartType === "histogram" ? "at least 30 values" : "at least 20 values"}):</p>
+          <p>Select a numeric column:</p>
           <div className="column-dropdowns">
             <div>
               <label>Data Column:</label>
